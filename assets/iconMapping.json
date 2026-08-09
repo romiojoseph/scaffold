@@ -1,0 +1,632 @@
+{
+    "languageConfig": {
+        "javascript": {
+            "extensions": [
+                "js"
+            ],
+            "icon": "00.svg",
+            "color": "#f7df1e"
+        },
+        "next": {
+            "extensions": [
+                "mjs",
+                "cjs"
+            ],
+            "icon": "01.svg",
+            "color": "#f7df1e"
+        },
+        "typescript": {
+            "extensions": [
+                "ts",
+                "mts",
+                "cts"
+            ],
+            "icon": "02.svg",
+            "color": "#3178c6"
+        },
+        "jsx": {
+            "extensions": [
+                "jsx"
+            ],
+            "icon": "03.svg",
+            "color": "#61dafb"
+        },
+        "tsx": {
+            "extensions": [
+                "tsx"
+            ],
+            "icon": "03.svg",
+            "color": "#3178c6"
+        },
+        "python": {
+            "extensions": [
+                "py",
+                "pyw",
+                "pyi",
+                "pyc"
+            ],
+            "icon": "04.svg",
+            "color": "#3776ab"
+        },
+        "java": {
+            "extensions": [
+                "java",
+                "class",
+                "jar"
+            ],
+            "icon": "23.svg",
+            "color": "#007396"
+        },
+        "c": {
+            "extensions": [
+                "c",
+                "h"
+            ],
+            "icon": "24.svg",
+            "color": "#a8b9cc"
+        },
+        "cpp": {
+            "extensions": [
+                "cpp",
+                "cc",
+                "cxx",
+                "hpp",
+                "hxx",
+                "h++"
+            ],
+            "icon": "25.svg",
+            "color": "#00599c"
+        },
+        "csharp": {
+            "extensions": [
+                "cs",
+                "csx"
+            ],
+            "icon": "26.svg",
+            "color": "#239120"
+        },
+        "go": {
+            "extensions": [
+                "go"
+            ],
+            "icon": "05.svg",
+            "color": "#00add8"
+        },
+        "rust": {
+            "extensions": [
+                "rs"
+            ],
+            "icon": "06.svg",
+            "color": "#dea584"
+        },
+        "swift": {
+            "extensions": [
+                "swift"
+            ],
+            "icon": "07.svg",
+            "color": "#fa7343"
+        },
+        "kotlin": {
+            "extensions": [
+                "kt",
+                "kts"
+            ],
+            "icon": "08.svg",
+            "color": "#7f52ff"
+        },
+        "ruby": {
+            "extensions": [
+                "rb",
+                "erb"
+            ],
+            "icon": "09.svg",
+            "color": "#cc342d"
+        },
+        "php": {
+            "extensions": [
+                "php",
+                "phtml",
+                "php3",
+                "php4",
+                "php5",
+                "phps"
+            ],
+            "icon": "10.svg",
+            "color": "#777bb4"
+        },
+        "html": {
+            "extensions": [
+                "html",
+                "htm",
+                "xhtml"
+            ],
+            "icon": "11.svg",
+            "color": "#e34c26"
+        },
+        "css": {
+            "extensions": [
+                "css"
+            ],
+            "icon": "12.svg",
+            "color": "#1572b6"
+        },
+        "scss": {
+            "extensions": [
+                "scss",
+                "sass"
+            ],
+            "icon": "13.svg",
+            "color": "#cc6699"
+        },
+        "less": {
+            "extensions": [
+                "less"
+            ],
+            "icon": "404.svg",
+            "color": "#1d365d"
+        },
+        "json": {
+            "extensions": [
+                "json",
+                "jsonc",
+                "json5"
+            ],
+            "icon": "14.svg",
+            "color": "#000000"
+        },
+        "svg": {
+            "extensions": [
+                "svg"
+            ],
+            "icon": "15.svg",
+            "color": "#F472B6"
+        },
+        "xml": {
+            "extensions": [
+                "xml",
+                "xaml"
+            ],
+            "icon": "16.svg",
+            "color": "#e34c26"
+        },
+        "yaml": {
+            "extensions": [
+                "yaml",
+                "yml"
+            ],
+            "icon": "17.svg",
+            "color": "#cb171e"
+        },
+        "markdown": {
+            "extensions": [
+                "md",
+                "mdx",
+                "markdown"
+            ],
+            "icon": "18.svg",
+            "color": "#000000"
+        },
+        "sql": {
+            "extensions": [
+                "sql",
+                "mysql",
+                "pgsql"
+            ],
+            "icon": "19.svg",
+            "color": "#f29111"
+        },
+        "bash": {
+            "extensions": [
+                "sh",
+                "bash",
+                "zsh",
+                "fish"
+            ],
+            "icon": "20.svg",
+            "color": "#4eaa25"
+        },
+        "powershell": {
+            "extensions": [
+                "ps1",
+                "psm1",
+                "psd1"
+            ],
+            "icon": "20.svg",
+            "color": "#012456"
+        },
+        "batch": {
+            "extensions": [
+                "bat",
+                "cmd"
+            ],
+            "icon": "20.svg",
+            "color": "#c1f12e"
+        },
+        "dockerfile": {
+            "extensions": [
+                "dockerfile"
+            ],
+            "icon": "21.svg",
+            "color": "#384d54"
+        },
+        "nginx": {
+            "extensions": [
+                "conf",
+                "nginx"
+            ],
+            "icon": "22.svg",
+            "color": "#009639"
+        },
+        "ini": {
+            "extensions": [
+                "ini",
+                "cfg",
+                "conf",
+                "toml"
+            ],
+            "icon": "404.svg",
+            "color": "#6d8086"
+        },
+        "text": {
+            "extensions": [
+                "txt",
+                "text",
+                "log"
+            ],
+            "icon": "404.svg",
+            "color": "#000000"
+        },
+        "r": {
+            "extensions": [
+                "r",
+                "rmd"
+            ],
+            "icon": "27.svg",
+            "color": "#276dc3"
+        },
+        "dart": {
+            "extensions": [
+                "dart"
+            ],
+            "icon": "28.svg",
+            "color": "#00b4ab"
+        },
+        "lua": {
+            "extensions": [
+                "lua"
+            ],
+            "icon": "404.svg",
+            "color": "#000080"
+        },
+        "perl": {
+            "extensions": [
+                "pl",
+                "pm",
+                "t"
+            ],
+            "icon": "404.svg",
+            "color": "#0298c3"
+        },
+        "scala": {
+            "extensions": [
+                "scala",
+                "sc"
+            ],
+            "icon": "29.svg",
+            "color": "#dc322f"
+        },
+        "haskell": {
+            "extensions": [
+                "hs",
+                "lhs"
+            ],
+            "icon": "404.svg",
+            "color": "#5d4f85"
+        },
+        "clojure": {
+            "extensions": [
+                "clj",
+                "cljs",
+                "cljc",
+                "edn"
+            ],
+            "icon": "404.svg",
+            "color": "#5881d8"
+        },
+        "elixir": {
+            "extensions": [
+                "ex",
+                "exs"
+            ],
+            "icon": "404.svg",
+            "color": "#6e4a7e"
+        },
+        "erlang": {
+            "extensions": [
+                "erl",
+                "hrl"
+            ],
+            "icon": "404.svg",
+            "color": "#a90533"
+        },
+        "vue": {
+            "extensions": [
+                "vue"
+            ],
+            "icon": "30.svg",
+            "color": "#42b883"
+        },
+        "svelte": {
+            "extensions": [
+                "svelte"
+            ],
+            "icon": "31.svg",
+            "color": "#ff3e00"
+        },
+        "graphql": {
+            "extensions": [
+                "graphql",
+                "gql"
+            ],
+            "icon": "32.svg",
+            "color": "#e10098"
+        },
+        "prisma": {
+            "extensions": [
+                "prisma"
+            ],
+            "icon": "33.svg",
+            "color": "#2d3748"
+        },
+        "protobuf": {
+            "extensions": [
+                "proto"
+            ],
+            "icon": "404.svg",
+            "color": "#1b6ac6"
+        },
+        "makefile": {
+            "extensions": [
+                "makefile",
+                "mk"
+            ],
+            "icon": "22.svg",
+            "color": "#6d8086"
+        },
+        "gradle": {
+            "extensions": [
+                "gradle"
+            ],
+            "icon": "404.svg",
+            "color": "#02303a"
+        },
+        "groovy": {
+            "extensions": [
+                "groovy",
+                "gvy"
+            ],
+            "icon": "404.svg",
+            "color": "#4298b8"
+        },
+        "assembly": {
+            "extensions": [
+                "asm",
+                "s"
+            ],
+            "icon": "404.svg",
+            "color": "#6e4c13"
+        },
+        "fortran": {
+            "extensions": [
+                "f",
+                "for",
+                "f90",
+                "f95"
+            ],
+            "icon": "404.svg",
+            "color": "#734f96"
+        },
+        "cobol": {
+            "extensions": [
+                "cob",
+                "cbl"
+            ],
+            "icon": "404.svg",
+            "color": "#4c4c4c"
+        },
+        "vb": {
+            "extensions": [
+                "vb",
+                "vbs"
+            ],
+            "icon": "404.svg",
+            "color": "#945db7"
+        },
+        "fsharp": {
+            "extensions": [
+                "fs",
+                "fsi",
+                "fsx"
+            ],
+            "icon": "34.svg",
+            "color": "#378bba"
+        },
+        "ocaml": {
+            "extensions": [
+                "ml",
+                "mli"
+            ],
+            "icon": "404.svg",
+            "color": "#3be133"
+        },
+        "julia": {
+            "extensions": [
+                "jl"
+            ],
+            "icon": "35.svg",
+            "color": "#9558b2"
+        },
+        "nim": {
+            "extensions": [
+                "nim",
+                "nims"
+            ],
+            "icon": "404.svg",
+            "color": "#ffe953"
+        },
+        "zig": {
+            "extensions": [
+                "zig"
+            ],
+            "icon": "36.svg",
+            "color": "#f7a41d"
+        },
+        "solidity": {
+            "extensions": [
+                "sol"
+            ],
+            "icon": "404.svg",
+            "color": "#363636"
+        },
+        "terraform": {
+            "extensions": [
+                "tf",
+                "tfvars"
+            ],
+            "icon": "404.svg",
+            "color": "#7b42bc"
+        },
+        "bicep": {
+            "extensions": [
+                "bicep"
+            ],
+            "icon": "404.svg",
+            "color": "#00a4ef"
+        },
+        "latex": {
+            "extensions": [
+                "tex",
+                "latex"
+            ],
+            "icon": "37.svg",
+            "color": "#008080"
+        },
+        "bibtex": {
+            "extensions": [
+                "bib"
+            ],
+            "icon": "404.svg",
+            "color": "#008080"
+        },
+        "org": {
+            "extensions": [
+                "org"
+            ],
+            "icon": "404.svg",
+            "color": "#77aa99"
+        },
+        "restructuredtext": {
+            "extensions": [
+                "rst"
+            ],
+            "icon": "404.svg",
+            "color": "#141414"
+        },
+        "asciidoc": {
+            "extensions": [
+                "adoc",
+                "asc"
+            ],
+            "icon": "404.svg",
+            "color": "#e40046"
+        },
+        "diff": {
+            "extensions": [
+                "diff",
+                "patch"
+            ],
+            "icon": "404.svg",
+            "color": "#6d8086"
+        },
+        "git": {
+            "extensions": [
+                "gitignore",
+                "gitattributes",
+                "gitmodules"
+            ],
+            "icon": "38.svg",
+            "color": "#f05032"
+        },
+        "env": {
+            "extensions": [
+                "env",
+                "env.local",
+                "env.development",
+                "env.production"
+            ],
+            "icon": "22.svg",
+            "color": "#ebebeb"
+        },
+        "editorconfig": {
+            "extensions": [
+                "editorconfig"
+            ],
+            "icon": "22.svg",
+            "color": "#fff"
+        },
+        "csv": {
+            "extensions": [
+                "csv",
+                "tsv"
+            ],
+            "icon": "39.svg",
+            "color": "#89c763"
+        },
+        "hjson": {
+            "extensions": [
+                "hjson"
+            ],
+            "icon": "404.svg",
+            "color": "#000000"
+        },
+        "plist": {
+            "extensions": [
+                "plist"
+            ],
+            "icon": "404.svg",
+            "color": "#000000"
+        },
+        "handlebars": {
+            "extensions": [
+                "hbs",
+                "handlebars"
+            ],
+            "icon": "404.svg",
+            "color": "#f0772b"
+        },
+        "twig": {
+            "extensions": [
+                "twig"
+            ],
+            "icon": "404.svg",
+            "color": "#bacf29"
+        },
+        "ejs": {
+            "extensions": [
+                "ejs"
+            ],
+            "icon": "404.svg",
+            "color": "#a91e50"
+        },
+        "pug": {
+            "extensions": [
+                "pug",
+                "jade"
+            ],
+            "icon": "404.svg",
+            "color": "#a86454"
+        }
+    },
+    "defaultIcon": "404.svg",
+    "folderIcon": "100.svg"
+}
