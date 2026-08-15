@@ -58,6 +58,7 @@ enum AppSvgIcon {
   passwordDuotone('assets/icons/password-duotone.svg'),
   eyeSlashFill('assets/icons/eye-slash-fill.svg'),
   eyeDuotone('assets/icons/eye-duotone.svg'),
+  infoDuotone('assets/icons/info-duotone.svg'),
   arrowSquareOutDuotone('assets/icons/arrow-square-out-duotone.svg');
 
   final String assetPath;

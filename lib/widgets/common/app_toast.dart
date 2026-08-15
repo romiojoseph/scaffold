@@ -229,7 +229,7 @@ class _AppToastWidgetState extends State<_AppToastWidget>
       case AppToastType.warning:
         return AppSvgIcon.shieldWarningFill;
       case AppToastType.info:
-        return AppSvgIcon.sparkleDuotone;
+        return AppSvgIcon.infoDuotone;
     }
   }
 

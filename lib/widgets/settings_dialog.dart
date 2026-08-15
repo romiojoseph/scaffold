@@ -2,17 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/exclusions_config.dart';
+import '../models/thresholds_config.dart';
 import '../services/shell_integration_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import '../utils/clipboard_utils.dart';
 import 'common/app_icon.dart';
 import 'common/app_toast.dart';
 import 'common/app_button.dart';
 import 'common/app_text_field.dart';
 import 'common/app_toggle_switch.dart';
-
-import '../models/thresholds_config.dart';
 import 'threshold_settings_dialog.dart';
 
 class SettingsDialog extends StatefulWidget {
@@ -127,16 +127,59 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final input = _addController.text.trim();
     if (input.isEmpty) return;
 
-    final newItems = input
+    final candidates = input
         .split(',')
-        .map((e) => e.trim().replaceAll('\\', '/')) // normalise separators
-        .where((e) => e.isNotEmpty && !_patterns.contains(e))
+        .map((e) => e.trim().replaceAll('\\', '/'))
+        .where((e) => e.isNotEmpty)
         .toList();
 
-    setState(() {
-      _patterns.addAll(newItems);
-      _addController.clear();
-    });
+    if (candidates.isEmpty) return;
+
+    final added = <String>[];
+    final duplicates = <String>[];
+
+    for (final item in candidates) {
+      final exists = _patterns.any(
+        (p) => p.toLowerCase() == item.toLowerCase(),
+      );
+      if (exists) {
+        duplicates.add(item);
+      } else {
+        added.add(item);
+      }
+    }
+
+    if (duplicates.isNotEmpty) {
+      if (duplicates.length == 1) {
+        AppToast.showWarning(
+          context,
+          'Pattern "${duplicates.first}" already exists.',
+        );
+      } else {
+        AppToast.showWarning(
+          context,
+          '${duplicates.length} patterns already exist: ${duplicates.join(", ")}',
+        );
+      }
+    }
+
+    if (added.isNotEmpty) {
+      setState(() {
+        _patterns.addAll(added);
+        _addController.clear();
+      });
+      if (added.length == 1) {
+        AppToast.showSuccess(
+          context,
+          'Added exclusion pattern "${added.first}".',
+        );
+      } else {
+        AppToast.showSuccess(
+          context,
+          'Added ${added.length} exclusion patterns.',
+        );
+      }
+    }
   }
 
   void _togglePreset(String presetName, List<String> presetItems) {
@@ -155,21 +198,35 @@ class _SettingsDialogState extends State<SettingsDialog> {
   }
 
   void _removePattern(int index) {
+    final removed = _patterns[index];
     setState(() {
       _patterns.removeAt(index);
     });
+    AppToast.showInfo(context, 'Removed exclusion pattern "$removed".');
+  }
+
+  Future<void> _copyPattern(String pattern) async {
+    final success = await ClipboardUtils.copy(pattern);
+    if (!mounted) return;
+    if (success) {
+      AppToast.showSuccess(context, 'Copied "$pattern" to clipboard.');
+    } else {
+      AppToast.showError(context, 'Failed to copy to clipboard.');
+    }
   }
 
   void _clearAll() {
     setState(() {
       _patterns.clear();
     });
+    AppToast.showInfo(context, 'Cleared all exclusion patterns.');
   }
 
   void _resetDefaults() {
     setState(() {
       _patterns = List.from(ExclusionsConfig.defaultExclusions);
     });
+    AppToast.showInfo(context, 'Reset exclusions to default patterns.');
   }
 
   @override
@@ -571,10 +628,22 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             ),
                             IconButton(
                               icon: const AppIcon(
-                                AppSvgIcon.trash,
+                                AppSvgIcon.copy,
                                 color: AppColors.neutral7,
                                 size: 16,
                               ),
+                              tooltip: 'Copy pattern',
+                              splashRadius: 16,
+                              onPressed: () => _copyPattern(item),
+                            ),
+                            IconButton(
+                              icon: const AppIcon(
+                                AppSvgIcon.trash,
+                                color: AppColors.dangerBase,
+                                size: 16,
+                              ),
+                              tooltip: 'Delete pattern',
+                              splashRadius: 16,
                               onPressed: () => _removePattern(index),
                             ),
                           ],

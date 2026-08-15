@@ -147,7 +147,7 @@ class ScannerService {
         ),
       );
 
-      final tokeiStats = _runTokei(params.path);
+      final tokeiStats = _runTokei(params.path, activeConfig);
 
       final totals = ScanTotals();
       int lastReportedCount = 0;
@@ -232,16 +232,16 @@ class ScannerService {
         if (entity is Directory) {
           totals.directories++;
           onItemProcessed?.call();
-          final subChildren = _scanSubDir(
-            entity,
-            exclusionsConfig,
-            totals,
-            collectNodes: collectNodes && !isExcluded,
-            tokeiStats: tokeiStats,
-            rootPath: relativePath,
-            onItemProcessed: onItemProcessed,
-          );
           if (collectNodes && !isExcluded) {
+            final subChildren = _scanSubDir(
+              entity,
+              exclusionsConfig,
+              totals,
+              collectNodes: true,
+              tokeiStats: tokeiStats,
+              rootPath: relativePath,
+              onItemProcessed: onItemProcessed,
+            );
             FileStat? dirStat;
             try {
               dirStat = entity.statSync();
@@ -307,22 +307,51 @@ class ScannerService {
   /// Runs the bundled tokei CLI once over the whole root and returns
   /// per-file line statistics keyed by normalized absolute path.
   static Map<String, ({int total, int code, int blank, int comments})>
-      _runTokei(String rootPath) {
+      _runTokei(String rootPath, ExclusionsConfig config) {
     final result = <String, ({int total, int code, int blank, int comments})>{};
     final exe = _findTokei();
     if (exe == null) return result;
+
+    final args = <String>[
+      rootPath,
+      '--output',
+      'json',
+      '--files',
+      '--hidden',
+    ];
+
+    if (config.enabled) {
+      for (final p in config.patterns) {
+        final trimmed = p.trim();
+        if (trimmed.isNotEmpty) {
+          args.addAll(['-e', trimmed]);
+        }
+      }
+    }
+
+    if (config.gitignoreOnly) {
+      for (final p in config.gitignorePatterns) {
+        final trimmed = p.trim();
+        if (trimmed.isNotEmpty) {
+          args.addAll(['-e', trimmed]);
+        }
+      }
+    } else if (!config.enabled) {
+      args.add('--no-ignore');
+    }
 
     ProcessResult proc;
     try {
       proc = Process.runSync(
         exe,
-        [rootPath, '--output', 'json', '--files', '--no-ignore', '--hidden'],
+        args,
         stdoutEncoding: utf8,
       );
     } catch (_) {
       return result;
     }
     if (proc.exitCode != 0) return result;
+
 
     try {
       final data = jsonDecode(proc.stdout as String) as Map<String, dynamic>;
