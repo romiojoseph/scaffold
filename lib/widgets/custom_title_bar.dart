@@ -3,6 +3,7 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import '../utils/url_utils.dart';
 import 'common/app_icon.dart';
 import 'common/app_button.dart';
 
@@ -15,6 +16,9 @@ class CustomTitleBar extends StatelessWidget {
   final VoidCallback? onExportPressed;
   final VoidCallback? onOpenTerminalPressed;
   final VoidCallback? onOpenExplorerPressed;
+  final VoidCallback? onGlobalDependenciesPressed;
+  final VoidCallback? onFileHashPressed;
+  final VoidCallback? onGitHubPressed;
   final bool hasResults;
 
   const CustomTitleBar({
@@ -27,6 +31,9 @@ class CustomTitleBar extends StatelessWidget {
     this.onExportPressed,
     this.onOpenTerminalPressed,
     this.onOpenExplorerPressed,
+    this.onGlobalDependenciesPressed,
+    this.onFileHashPressed,
+    this.onGitHubPressed,
     this.hasResults = false,
   });
 
@@ -123,6 +130,34 @@ class CustomTitleBar extends StatelessWidget {
                 variant: AppButtonVariant.ghost,
                 size: AppButtonSize.small,
                 onPressed: onOpenTerminalPressed,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              AppButton(
+                label: 'Global Packages',
+                svgIcon: AppSvgIcon.packageDuotone,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.small,
+                onPressed: onGlobalDependenciesPressed,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              AppButton(
+                label: 'File Hash',
+                svgIcon: AppSvgIcon.passwordDuotone,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.small,
+                onPressed: onFileHashPressed,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              AppButton(
+                label: 'Releases',
+                svgIcon: AppSvgIcon.arrowSquareOutDuotone,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.small,
+                onPressed:
+                    onGitHubPressed ??
+                    () => UrlUtils.openUrl(
+                      'https://github.com/romiojoseph/scaffold/releases/',
+                    ),
               ),
             ],
             Expanded(child: MoveWindow()),

@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'common/app_icon.dart';
+import 'common/app_toast.dart';
 import 'common/app_button.dart';
 import 'common/app_text_field.dart';
 import 'common/app_toggle_switch.dart';
@@ -118,9 +119,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       _jsonUpdating = false;
     });
     if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Windows registry update failed.')),
-      );
+      AppToast.showError(context, 'Windows registry update failed.');
     }
   }
 

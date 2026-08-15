@@ -10,9 +10,9 @@ import '../models/fs_node.dart';
 import '../models/scan_stats.dart';
 import '../services/scanner_service.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_typography.dart';
+import '../utils/terminal_utils.dart';
 import '../widgets/ascii_view.dart';
+import '../widgets/common/app_toast.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/export_dialog.dart';
 import '../widgets/header_bar.dart';
@@ -20,9 +20,16 @@ import '../widgets/node_detail_drawer.dart';
 import '../widgets/path_history_drawer.dart';
 import '../widgets/snapshot_diff_dialog.dart';
 import '../widgets/stats_view.dart';
-import '../widgets/common/app_icon.dart';
+import '../widgets/git_history_view.dart';
+import '../widgets/dependencies_view.dart';
+import 'global_dependencies_screen.dart';
+import 'file_hash_screen.dart';
 import '../widgets/tree_view.dart';
 import '../widgets/custom_title_bar.dart';
+import '../widgets/home/empty_state_view.dart';
+import '../widgets/home/exclusions_banner.dart';
+import '../widgets/home/main_tab_bar.dart';
+import '../widgets/home/scan_progress_banner.dart';
 import '../widgets/viewers/file_viewer_page.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen>
   ScanTotals? _scanTotals;
   String _asciiOutput = '';
   bool _isScanning = false;
+  ScanProgress? _scanProgress;
   String? _errorMessage;
   FsNode? _selectedNode;
   late File _configFile;
@@ -57,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _pathController.text = Directory.current.path;
     _loadConfigs();
     _loadPathHistory();
@@ -223,14 +231,9 @@ class _HomeScreenState extends State<HomeScreen>
         // Persist directly — calling _saveExclusions would re-trigger _startScan
         await _exclusionsConfig.saveToFile(_configFile);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No .gitignore file found in target directory. "Scan based on .gitignore" has been automatically turned off.',
-              ),
-              backgroundColor: AppColors.warningBase,
-              duration: Duration(seconds: 4),
-            ),
+          AppToast.showWarning(
+            context,
+            'No .gitignore file found in target directory. "Scan based on .gitignore" has been automatically turned off.',
           );
         }
       }
@@ -241,12 +244,23 @@ class _HomeScreenState extends State<HomeScreen>
 
     setState(() {
       _isScanning = true;
+      _scanProgress = const ScanProgress(
+        stage: ScanStage.initializing,
+        message: 'Initializing scan...',
+      );
       _errorMessage = null;
       _selectedNode = null;
     });
 
     try {
-      final result = await scanner.scanDirectoryInIsolate(targetPath);
+      final result = await scanner.scanDirectoryInIsolate(
+        targetPath,
+        onProgress: (progress) {
+          if (mounted) {
+            setState(() => _scanProgress = progress);
+          }
+        },
+      );
       final results = result.nodes;
       final stats = ScanStats.fromNodes(result.nodes);
 
@@ -270,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen>
           _stats = stats;
           _asciiOutput = buffer.toString();
           _isScanning = false;
+          _scanProgress = null;
           _currentScanner = null;
         });
         _savePathToHistory(targetPath);
@@ -279,6 +294,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception: ', '');
           _isScanning = false;
+          _scanProgress = null;
           _currentScanner = null;
         });
       }
@@ -289,6 +305,7 @@ class _HomeScreenState extends State<HomeScreen>
     _currentScanner?.cancelScan();
     setState(() {
       _isScanning = false;
+      _scanProgress = null;
       _currentScanner = null;
       _errorMessage = 'Scan was cancelled by user.';
     });
@@ -325,9 +342,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppToast.showInfo(context, message);
   }
 
   Future<void> _openTerminal() async {
@@ -342,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     try {
       final canonicalPath = await Directory(targetPath).resolveSymbolicLinks();
-      final terminal = await _detectDefaultTerminal();
+      final terminal = await detectDefaultTerminal();
       final args = terminal.argsFor(canonicalPath);
       await Process.start(
         terminal.executable,
@@ -365,64 +380,6 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       _showSnack('Failed to open Explorer: $e');
     }
-  }
-
-  Future<_TerminalInfo> _detectDefaultTerminal() async {
-    // Check for Windows Terminal first (most common default).
-    final wtPath = await _findWindowsTerminal();
-    if (wtPath != null) {
-      return _TerminalInfo(wtPath, ['-d']);
-    }
-
-    // Check registry for delegation setting.
-    final result = await Process.run('reg', [
-      'query',
-      r'HKCU\Console',
-      '/v',
-      'DelegationTerminal',
-    ]);
-    if (result.exitCode == 0) {
-      final output = result.stdout.toString();
-      if (output.contains('{E12CFF52-A429-4CEC-B159-25F7522982BC}')) {
-        final wt = await _findWindowsTerminal();
-        if (wt != null) return _TerminalInfo(wt, ['-d']);
-      }
-    }
-
-    // Fallback: cmd.exe with cd.
-    return _TerminalInfo('cmd.exe', [
-      '/c',
-      'start',
-      'cmd.exe',
-      '/k',
-      'cd',
-      '/d',
-    ]);
-  }
-
-  Future<String?> _findWindowsTerminal() async {
-    // Try PATH first.
-    final which = await Process.run('where', ['wt.exe']);
-    if (which.exitCode == 0) {
-      final lines = which.stdout.toString().trim().split('\n');
-      if (lines.isNotEmpty) return lines.first.trim();
-    }
-
-    // Try known Store location.
-    final localAppData = Platform.environment['LOCALAPPDATA'] ?? '';
-    if (localAppData.isNotEmpty) {
-      final storeDir = Directory('$localAppData\\Microsoft\\WindowsApps');
-      if (await storeDir.exists()) {
-        await for (final entity in storeDir.list()) {
-          if (entity.path.toLowerCase().contains('windowsterminal') &&
-              entity.path.toLowerCase().endsWith('.exe')) {
-            return entity.path;
-          }
-        }
-      }
-    }
-
-    return null;
   }
 
   Future<void> _openFileFromSystem() async {
@@ -479,6 +436,20 @@ class _HomeScreenState extends State<HomeScreen>
             onExportPressed: _openExportDialog,
             onOpenTerminalPressed: _openTerminal,
             onOpenExplorerPressed: _openExplorer,
+            onGlobalDependenciesPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const GlobalDependenciesScreen(),
+                ),
+              );
+            },
+            onFileHashPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const FileHashScreen(),
+                ),
+              );
+            },
             hasResults: _scanResults.isNotEmpty,
           ),
           HeaderBar(
@@ -487,138 +458,14 @@ class _HomeScreenState extends State<HomeScreen>
             onScanPressed: _startScan,
             onCancelPressed: _cancelScan,
           ),
-          if (_exclusionsConfig.gitignoreOnly ||
-              (_exclusionsConfig.enabled &&
-                  _exclusionsConfig.patterns.isNotEmpty))
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              color: AppColors.neutral13,
-              child: Row(
-                children: [
-                  const AppIcon(
-                    AppSvgIcon.funnel,
-                    size: 14,
-                    color: AppColors.neutral6,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    _exclusionsConfig.gitignoreOnly ? 'Mode: ' : 'Excluding: ',
-                    style: AppTypography.caption(color: AppColors.neutral6),
-                  ),
-                  Expanded(
-                    child: Text(
-                      _exclusionsConfig.gitignoreOnly
-                          ? '.gitignore + manual patterns'
-                          : _exclusionsConfig.patterns.join(', '),
-                      style: AppTypography.caption(
-                        color: _exclusionsConfig.gitignoreOnly
-                            ? AppColors.primaryBase
-                            : AppColors.neutral5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          AnimatedBuilder(
-            animation: _tabController,
-            builder: (context, _) {
-              return TabBar(
-                controller: _tabController,
-                indicatorColor: AppColors.primaryBase,
-                labelColor: AppColors.primaryBase,
-                unselectedLabelColor: AppColors.neutral6,
-                dividerColor: AppColors.neutral11,
-                // Add these two properties
-                labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.normal,
-                ),
-                tabs: [
-                  Tab(
-                    icon: AppIcon(
-                      AppSvgIcon.treeStructure,
-                      size: 18,
-                      color: _tabController.index == 0
-                          ? AppColors.primaryBase
-                          : AppColors.neutral6,
-                    ),
-                    text: 'Tree View',
-                  ),
-                  Tab(
-                    icon: AppIcon(
-                      AppSvgIcon.code,
-                      size: 18,
-                      color: _tabController.index == 1
-                          ? AppColors.primaryBase
-                          : AppColors.neutral6,
-                    ),
-                    text: 'ASCII Output',
-                  ),
-                  Tab(
-                    icon: AppIcon(
-                      AppSvgIcon.presentationChart,
-                      size: 18,
-                      color: _tabController.index == 2
-                          ? AppColors.primaryBase
-                          : AppColors.neutral6,
-                    ),
-                    text: 'Statistics',
-                  ),
-                ],
-              );
-            },
-          ),
+          scanExclusionsBanner(context, _exclusionsConfig),
+          if (_isScanning) scanProgressBanner(_scanProgress),
+          appMainTabBar(_tabController),
           Expanded(
             child: _errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const AppIcon(
-                          AppSvgIcon.xBold,
-                          color: AppColors.dangerBase,
-                          size: 48,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Error scanning directory',
-                          style: AppTypography.heading6(
-                            color: AppColors.dangerBase,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          _errorMessage!,
-                          style: AppTypography.body(color: AppColors.neutral6),
-                        ),
-                      ],
-                    ),
-                  )
+                ? homeErrorState(context, _errorMessage!)
                 : _scanResults.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const AppIcon(
-                          AppSvgIcon.folderOpen,
-                          color: AppColors.neutral8,
-                          size: 64,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Select a directory path above and click "Scan Directory"',
-                          style: AppTypography.body(color: AppColors.neutral6),
-                        ),
-                      ],
-                    ),
-                  )
+                ? homeEmptyState(context)
                 : Row(
                     children: [
                       Expanded(
@@ -642,6 +489,14 @@ class _HomeScreenState extends State<HomeScreen>
                               thresholdsConfig: _thresholdsConfig,
                               tokenizerRegistry: _tokenizerRegistry,
                               scanTotals: _scanTotals,
+                              rootPath: _pathController.text.trim(),
+                            ),
+                            GitHistoryView(
+                              rootPath: _pathController.text.trim(),
+                            ),
+                            DependenciesView(
+                              nodes: _scanResults,
+                              rootPath: _pathController.text.trim(),
                             ),
                           ],
                         ),
@@ -657,12 +512,4 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-}
-
-class _TerminalInfo {
-  final String executable;
-  final List<String> args;
-  const _TerminalInfo(this.executable, this.args);
-
-  List<String> argsFor(String path) => [...args, path];
 }

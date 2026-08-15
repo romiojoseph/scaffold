@@ -30,6 +30,14 @@ class _AsciiViewState extends State<AsciiView> {
   bool _showCounts = false;
   static const int _maxFilesPerDir = 3;
 
+  String? _cachedVisibleContent;
+  List<String>? _cachedLines;
+  bool? _cachedTrim;
+  bool? _cachedFoldersOnly;
+  bool? _cachedShowCounts;
+  List<FsNode>? _cachedNodes;
+  String? _cachedAsciiContent;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -45,27 +53,49 @@ class _AsciiViewState extends State<AsciiView> {
   }
 
   String _getVisibleContent() {
+    if (_cachedVisibleContent != null &&
+        _cachedTrim == _trimEnabled &&
+        _cachedFoldersOnly == _foldersOnly &&
+        _cachedShowCounts == _showCounts &&
+        identical(_cachedNodes, widget.nodes) &&
+        _cachedAsciiContent == widget.asciiContent) {
+      return _cachedVisibleContent!;
+    }
+
+    String result;
     if (widget.nodes != null && widget.nodes!.isNotEmpty) {
       if (!_trimEnabled && !_foldersOnly) {
-        return widget.asciiContent;
+        result = widget.asciiContent;
+      } else {
+        result = _generateAsciiFromNodes(
+          widget.nodes!,
+          foldersOnly: _foldersOnly,
+          showCounts: _foldersOnly && _showCounts,
+          trimEnabled: _trimEnabled,
+          maxFiles: _maxFilesPerDir,
+        );
       }
-      return _generateAsciiFromNodes(
-        widget.nodes!,
+    } else if (widget.asciiContent.isEmpty || (!_trimEnabled && !_foldersOnly)) {
+      result = widget.asciiContent;
+    } else {
+      result = _trimAscii(
+        widget.asciiContent,
         foldersOnly: _foldersOnly,
         showCounts: _foldersOnly && _showCounts,
-        trimEnabled: _trimEnabled,
-        maxFiles: _maxFilesPerDir,
       );
     }
 
-    if (widget.asciiContent.isEmpty) return widget.asciiContent;
-    if (!_trimEnabled && !_foldersOnly) return widget.asciiContent;
-    return _trimAscii(
-      widget.asciiContent,
-      foldersOnly: _foldersOnly,
-      showCounts: _foldersOnly && _showCounts,
-    );
+    _cachedVisibleContent = result;
+    _cachedLines = result.split('\n');
+    _cachedTrim = _trimEnabled;
+    _cachedFoldersOnly = _foldersOnly;
+    _cachedShowCounts = _showCounts;
+    _cachedNodes = widget.nodes;
+    _cachedAsciiContent = widget.asciiContent;
+
+    return result;
   }
+
 
   String _generateAsciiFromNodes(
     List<FsNode> nodes, {
@@ -268,11 +298,12 @@ class _AsciiViewState extends State<AsciiView> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleContent = _getVisibleContent();
-    final lines = visibleContent.split('\n');
+    _getVisibleContent();
+    final lines = _cachedLines ?? const [];
     final filteredLines = _query.isEmpty
         ? lines
         : lines.where((line) => line.toLowerCase().contains(_query)).toList();
+
 
     return Column(
       children: [

@@ -80,7 +80,40 @@ The generated table can be copied as Markdown and used directly in documentation
 
 *For counting code, the binary built with Tokei (cargo install --git https://github.com/XAMPPRocky/tokei.git tokei) is used. It has been added to assets\third_party\tokei\tokei.exe.*
 
+
+#### Git History
+If Git is initialized in the selected directory, Scaffold displays the commit history along with commit activity, line changes, authors, and code frequency metrics. It's useful for understanding the project's evolution and development patterns over time.
+
+* Commit list with author, date, message, and commit hashes
+* Direct links to commit URLs on GitHub or any other origin.
+* File-level additions, deletions, and status breakdowns per commit
+
+#### Dependencies
+Inspect packages and dependencies used across the project. Scaffold automatically scans for package manifests across the directory tree.
+
+**Supported package manifests & ecosystems:**
+* **Flutter / Dart:** `pubspec.yaml` (via pub.dev)
+* **Node.js / JavaScript / TypeScript:** `package.json` (via npmjs.org)
+* **Rust:** `Cargo.toml` (via crates.io)
+* **Go:** `go.mod` (via proxy.golang.org)
+* **Python:** `pyproject.toml` and `requirements.txt` (via PyPI)
+
+**Included:**
+* Live version check against official package registries
+* Outdated package identification with latest published version details
+* Security vulnerability and advisory checks (via OSV database)
+* License, repository links, changelog links, and published dates
+
 ---
+
+### Global Packages Manager
+A centralized dashboard accessible from the title bar to audit packages across multiple projects simultaneously.
+
+**Features:**
+* Discovers and indexes manifests across all recent projects in history
+* Aggregates package usages to detect cross-project version drift
+* Filters by ecosystem, outdated status, or security vulnerabilities
+
 
 ### File Line Threshold
 Set custom limits for file sizes. The purpose is to identify files that have become too large and may need refactoring.
@@ -219,6 +252,18 @@ Useful for quickly understanding the technology mix of a repository.
 
 ---
 
+### File Hash & Encryption
+A utility screen for generating file checksums and password-protecting files with encryption.
+
+**Features:**
+* **File Hashing:** Generate both SHA-256 and SHA-512 hashes for multiple files at once.
+* **Click to Copy:** Click any hash value to quickly copy it to your clipboard.
+* **Export Hashes:** Save the generated hash list as a CSV or JSON file (with an option to hide local file paths).
+* **Encrypt Files:** Password-protect any file into an encrypted `.enc` file.
+* **Decrypt Files:** Restore your original `.enc` files by entering the password. If the password is wrong or the file is corrupted, it will let you know.
+
+---
+
 ### Technology Stack
 **Built with:**
 * Flutter
@@ -226,12 +271,18 @@ Useful for quickly understanding the technology mix of a repository.
 * Flutter Windows Desktop
 
 **Key dependencies:**
-* `bitsdojo_window` / `window_manager` — custom window chrome
-* `file_picker` — file open dialogs
-* `path_provider` — app data directory resolution
-* `flutter_svg` — SVG icon rendering
-* `google_fonts` — typography
-* `intl` — number and date formatting
+* [`bitsdojo_window`](https://pub.dev/packages/bitsdojo_window) / [`window_manager`](https://pub.dev/packages/window_manager) — custom window chrome
+* [`file_picker`](https://pub.dev/packages/file_picker) — file and directory selection dialogs
+* [`path_provider`](https://pub.dev/packages/path_provider) — application data directory resolution
+* [`path`](https://pub.dev/packages/path) — filesystem path operations
+* [`flutter_svg`](https://pub.dev/packages/flutter_svg) — SVG icon rendering
+* [`google_fonts`](https://pub.dev/packages/google_fonts) — custom typography
+* [`intl`](https://pub.dev/packages/intl) — date, time, and number formatting
+* [`crypto`](https://pub.dev/packages/crypto) — cryptographic hashing (SHA-256 / SHA-512)
+* [`pointycastle`](https://pub.dev/packages/pointycastle) — AES-256-GCM cipher and Argon2id / PBKDF2 key derivation
+* [`ffi`](https://pub.dev/packages/ffi) — Windows CNG (`bcrypt.dll`) native interoperability
+* [`hf_tokenizers`](https://pub.dev/packages/hf_tokenizers) — HuggingFace BPE token estimation
+
 
 ---
 
@@ -240,45 +291,56 @@ Useful for quickly understanding the technology mix of a repository.
 lib/
 ├── models/
 │   ├── Data models and configuration classes
-│   └── Scan, exclusion, threshold, and diff models
+│   └── Scan, exclusion, threshold, dependency, and diff models
 │
 ├── screens/
-│   └── Main application screens
+│   ├── HomeScreen (main scanner & multi-tab explorer)
+│   ├── FileHashScreen (hashing & file encryption)
+│   └── GlobalDependenciesScreen (cross-project package audit)
 │
 ├── services/
-│   ├── File scanning logic
-│   ├── Export functionality
-│   ├── Icon mapping
+│   ├── File scanner & Tokei line analysis
+│   ├── Cryptography, hashing & Windows CNG integration
+│   ├── Dependency manifest parser & registry version checker
+│   ├── Git history & commit parser
+│   ├── BPE tokenizer & registry
+│   ├── Export service
+│   ├── Icon mapping configuration
 │   └── Windows shell integration
 │
 ├── theme/
-│   ├── App colours
-│   ├── Typography
-│   ├── Spacing
-│   └── Theme configuration
+│   ├── App colors (AppColors)
+│   ├── Typography (AppTypography)
+│   ├── Spacing (AppSpacing)
+│   └── Theme configuration (AppTheme)
 │
 ├── utils/
-│   └── Shared utility functions
+│   └── Shared utility functions (clipboard, formatting, terminal, URLs)
 │
 ├── widgets/
-│   ├── common/
-│   │   └── Reusable UI components
-│   │
-│   ├── viewers/
-│   │   └── File and JSON viewers
-│   │
-│   └── Application-specific UI components
+│   ├── common/         # Reusable design system UI components
+│   ├── deps/           # Project dependency cards and views
+│   ├── file_hash/      # Checksum tables and crypto cards
+│   ├── git/            # Git commit lists and frequency charts
+│   ├── global_deps/    # Global package tables and filters
+│   ├── home/           # Progress banners and main tab controls
+│   ├── stats/          # Metric cards and language breakdown charts
+│   ├── viewers/        # File viewer and JSON schema skeleton preview
+│   └── Feature-specific views (Tree, ASCII, Stats, Dependencies, Git)
 │
 └── main.dart
 
 assets/
-├── icons/
-├── mapping/
+├── icons/              # General UI SVG icons
+├── mapping/            # File extension and language SVG icons
+├── third_party/        # Bundled Tokei binary & tokenizer assets
+├── iconMapping.json    # Extension-to-icon mapping config
 └── AppIcon.png
 
 test/
 └── Widget tests
 ```
+
 
 ---
 

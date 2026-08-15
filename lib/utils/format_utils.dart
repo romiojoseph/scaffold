@@ -129,4 +129,28 @@ class FormatUtils {
     if (dt == null) return 'N/A';
     return DateFormat('dd MMM yyyy, h:mm a').format(dt);
   }
+
+  /// Compact relative date (e.g. "2yrs ago", "3mo ago", "5d ago", "just now")
+  static String formatRelativeDate(DateTime? date) {
+    if (date == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays >= 365) {
+      final years = (diff.inDays / 365).floor();
+      return '$years${years == 1 ? 'yr' : 'yrs'} ago';
+    } else if (diff.inDays >= 30) {
+      final months = (diff.inDays / 30).floor();
+      return '$months${months == 1 ? 'mo' : 'mos'} ago';
+    } else if (diff.inDays >= 7) {
+      final weeks = (diff.inDays / 7).floor();
+      return '$weeks${weeks == 1 ? 'wk' : 'wks'} ago';
+    } else if (diff.inDays >= 1) {
+      return '${diff.inDays}d ago';
+    } else if (diff.inHours >= 1) {
+      return '${diff.inHours}h ago';
+    } else {
+      return 'just now';
+    }
+  }
 }

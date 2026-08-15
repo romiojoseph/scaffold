@@ -18,6 +18,7 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final bool readOnly;
   final bool autofocus;
+  final bool obscureText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final AppInputSize size;
@@ -35,11 +36,13 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.readOnly = false,
     this.autofocus = false,
+    this.obscureText = false,
     this.onChanged,
     this.onSubmitted,
     this.size = AppInputSize.medium,
     this.focusNode,
   });
+
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -149,15 +152,6 @@ class _AppTextFieldState extends State<AppTextField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.labelText != null) ...[
-          Text(
-            widget.labelText!,
-            style: AppTypography.label(
-              color: widget.enabled ? AppColors.neutral3 : AppColors.neutral7,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
         MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
@@ -229,9 +223,11 @@ class _AppTextFieldState extends State<AppTextField> {
                       enabled: widget.enabled,
                       readOnly: widget.readOnly,
                       autofocus: widget.autofocus,
+                      obscureText: widget.obscureText,
                       onChanged: widget.onChanged,
                       onSubmitted: widget.onSubmitted,
                       style: textStyle,
+
                       cursorColor: AppColors.primaryBase,
                       decoration: InputDecoration(
                         hintText: widget.hintText,

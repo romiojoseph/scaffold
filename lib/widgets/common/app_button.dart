@@ -143,7 +143,7 @@ class _AppButtonState extends State<AppButton> {
           foregroundColor = AppColors.neutral0;
           borderSide = const BorderSide(color: AppColors.neutral10, width: 2);
         } else {
-          foregroundColor = AppColors.neutral2;
+          foregroundColor = AppColors.neutral5;
           borderSide = const BorderSide(color: AppColors.neutral10, width: 2);
         }
         break;

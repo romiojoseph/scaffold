@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/fs_node.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -13,6 +10,7 @@ import '../services/icon_mapping_service.dart';
 
 import 'common/app_icon.dart';
 import 'common/app_text_field.dart';
+import 'common/node_context_menu.dart';
 
 class DirectoryTreeView extends StatefulWidget {
   final List<FsNode> nodes;
@@ -40,8 +38,30 @@ class _DirectoryTreeViewState extends State<DirectoryTreeView> {
     super.dispose();
   }
 
+  List<({FsNode node, int depth})> _getFlattenedVisibleNodes() {
+    final list = <({FsNode node, int depth})>[];
+
+    void addNode(FsNode node, int depth) {
+      if (!_nodeMatchesFilter(node, _filter)) return;
+      list.add((node: node, depth: depth));
+
+      if (node.isDirectory && node.isExpanded && node.children != null) {
+        for (final child in node.children!) {
+          addNode(child, depth + 1);
+        }
+      }
+    }
+
+    for (final root in widget.nodes) {
+      addNode(root, 0);
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visibleNodes = _getFlattenedVisibleNodes();
+
     return Column(
       children: [
         Padding(
@@ -69,12 +89,13 @@ class _DirectoryTreeViewState extends State<DirectoryTreeView> {
           ),
         ),
         Expanded(
-          child: ListView(
+          child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            children: widget.nodes
-                .where((n) => _nodeMatchesFilter(n, _filter))
-                .map((node) => _buildNodeTile(node, 0))
-                .toList(),
+            itemCount: visibleNodes.length,
+            itemBuilder: (context, index) {
+              final item = visibleNodes[index];
+              return _buildNodeTile(item.node, item.depth);
+            },
           ),
         ),
       ],
@@ -92,157 +113,17 @@ class _DirectoryTreeViewState extends State<DirectoryTreeView> {
     return true;
   }
 
-  String _relativePath(String fullPath) {
-    final root = widget.rootPath;
-    if (fullPath == root) return '.';
-    if (fullPath.startsWith(root)) {
-      var rel = fullPath.substring(root.length);
-      while (rel.startsWith('/') || rel.startsWith('\\')) {
-        rel = rel.substring(1);
-      }
-      return rel;
-    }
-    return fullPath;
-  }
-
-  void _copyToClipboard(BuildContext context, String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'Copied to clipboard',
-            style: AppTypography.body(color: AppColors.neutral0),
-          ),
-          backgroundColor: AppColors.primaryBase,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-  }
-
-  void _openFolder(BuildContext context, String path) {
-    try {
-      Process.run('explorer.exe', [path]);
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open folder',
-            style: AppTypography.body(color: AppColors.neutral0),
-          ),
-          backgroundColor: AppColors.dangerBase,
-        ),
-      );
-    }
-  }
-
-  Future<void> _openTerminal(BuildContext context, String path) async {
-    try {
-      final targetDir = FileSystemEntity.isDirectorySync(path)
-          ? path
-          : File(path).parent.path;
-      final canonicalPath = await Directory(targetDir).resolveSymbolicLinks();
-      final terminalExe = await _findTerminal();
-      await Process.start(terminalExe, [
-        '-d',
-        canonicalPath,
-      ], workingDirectory: canonicalPath);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not open terminal',
-              style: AppTypography.body(color: AppColors.neutral0),
-            ),
-            backgroundColor: AppColors.dangerBase,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<String> _findTerminal() async {
-    final which = await Process.run('where', ['wt.exe']);
-    if (which.exitCode == 0) {
-      final lines = which.stdout.toString().trim().split('\n');
-      if (lines.isNotEmpty) return lines.first.trim();
-    }
-    return 'cmd.exe';
-  }
-
-  PopupMenuItem<String> _buildPopupMenuItem({
-    required String value,
-    required AppSvgIcon icon,
-    required String label,
-  }) {
-    return PopupMenuItem<String>(
-      value: value,
-      padding: EdgeInsets.zero,
-      child: _PopupMenuItemTile(icon: icon, label: label),
-    );
-  }
-
   void _showNodeContextMenu(
     BuildContext context,
     Offset globalPosition,
     FsNode node,
   ) {
-    final isDir = node.isDirectory;
-    final relativePath = _relativePath(node.path);
-
-    showMenu<String>(
+    NodeContextMenu.show(
       context: context,
-      position: RelativeRect.fromLTRB(
-        globalPosition.dx,
-        globalPosition.dy,
-        globalPosition.dx,
-        globalPosition.dy,
-      ),
-      items: [
-        if (isDir)
-          _buildPopupMenuItem(
-            value: 'open',
-            icon: AppSvgIcon.folderOpen,
-            label: 'Open Folder Here',
-          ),
-        _buildPopupMenuItem(
-          value: 'openTerminal',
-          icon: AppSvgIcon.code,
-          label: isDir ? 'Open Terminal Here' : 'Open Terminal in Folder',
-        ),
-        _buildPopupMenuItem(
-          value: 'copyName',
-          icon: AppSvgIcon.copy,
-          label: isDir ? 'Copy Folder Name' : 'Copy File Name',
-        ),
-        _buildPopupMenuItem(
-          value: 'copyPath',
-          icon: AppSvgIcon.copy,
-          label: 'Copy Path',
-        ),
-        _buildPopupMenuItem(
-          value: 'copyRelative',
-          icon: AppSvgIcon.copy,
-          label: 'Copy Relative Path',
-        ),
-      ],
-    ).then((value) {
-      if (value == null || !context.mounted) return;
-      switch (value) {
-        case 'open':
-          _openFolder(context, node.path);
-        case 'openTerminal':
-          _openTerminal(context, node.path);
-        case 'copyName':
-          _copyToClipboard(context, node.name);
-        case 'copyPath':
-          _copyToClipboard(context, node.path);
-        case 'copyRelative':
-          _copyToClipboard(context, relativePath);
-      }
-    });
+      globalPosition: globalPosition,
+      node: node,
+      rootPath: widget.rootPath,
+    );
   }
 
   Widget _buildNodeTile(FsNode node, int depth) {
@@ -251,82 +132,70 @@ class _DirectoryTreeViewState extends State<DirectoryTreeView> {
 
     if (node.isDirectory) {
       final children = node.children ?? [];
-      final filteredChildren = children
-          .where((c) => _nodeMatchesFilter(c, _filter))
-          .toList();
       final folderSvg = IconMappingConfig.instance.folderIcon;
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () {
-              setState(() {
-                node.isExpanded = !node.isExpanded;
-              });
-              widget.onNodeTap(node);
-            },
-            onSecondaryTapDown: (details) =>
-                _showNodeContextMenu(context, details.globalPosition, node),
-            borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: depth * AppSpacing.lg,
-                top: AppSpacing.xs,
-                bottom: AppSpacing.xs,
-                right: AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  AppIcon(
-                    node.isExpanded
-                        ? AppSvgIcon.caretDownBold
-                        : AppSvgIcon.caretRightBold,
-                    size: 16,
-                    color: AppColors.neutral6,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  SvgPicture.asset(
-                    'assets/mapping/$folderSvg',
-                    width: 18,
-                    height: 18,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      node.name,
-                      style: AppTypography.body(
-                        color: matchesFilter
-                            ? AppColors.neutral3
-                            : AppColors.neutral6,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.neutral10,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${children.length}',
-                      style: AppTypography.tagline(color: AppColors.neutral6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      return InkWell(
+        onTap: () {
+          setState(() {
+            node.isExpanded = !node.isExpanded;
+          });
+          widget.onNodeTap(node);
+        },
+        onSecondaryTapDown: (details) =>
+            _showNodeContextMenu(context, details.globalPosition, node),
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: depth * AppSpacing.lg,
+            top: AppSpacing.xs,
+            bottom: AppSpacing.xs,
+            right: AppSpacing.sm,
           ),
-          if (node.isExpanded)
-            ...filteredChildren.map(
-              (child) => _buildNodeTile(child, depth + 1),
-            ),
-        ],
+          child: Row(
+            children: [
+              AppIcon(
+                node.isExpanded
+                    ? AppSvgIcon.caretDownBold
+                    : AppSvgIcon.caretRightBold,
+                size: 16,
+                color: AppColors.neutral6,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              SvgPicture.asset(
+                'assets/mapping/$folderSvg',
+                width: 18,
+                height: 18,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  node.name,
+                  style: AppTypography.body(
+                    color: matchesFilter
+                        ? AppColors.neutral3
+                        : AppColors.neutral6,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral10,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${children.length}',
+                  style: AppTypography.tagline(color: AppColors.neutral6),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     } else {
       return InkWell(
@@ -380,55 +249,3 @@ class _DirectoryTreeViewState extends State<DirectoryTreeView> {
   }
 }
 
-class _PopupMenuItemTile extends StatefulWidget {
-  final AppSvgIcon icon;
-  final String label;
-
-  const _PopupMenuItemTile({required this.icon, required this.label});
-
-  @override
-  State<_PopupMenuItemTile> createState() => _PopupMenuItemTileState();
-}
-
-class _PopupMenuItemTileState extends State<_PopupMenuItemTile> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 4,
-        ),
-        decoration: BoxDecoration(
-          color: _isHovered
-              ? AppColors.primaryBase.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          children: [
-            AppIcon(
-              widget.icon,
-              size: 16,
-              color: _isHovered ? AppColors.primaryBase : AppColors.neutral4,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              widget.label,
-              style: AppTypography.body(
-                color: _isHovered ? AppColors.primaryBase : AppColors.neutral2,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

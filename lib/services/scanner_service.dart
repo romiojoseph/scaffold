@@ -11,6 +11,31 @@ class ScanParams {
   ScanParams({required this.path, required this.exclusionsConfig});
 }
 
+enum ScanStage {
+  initializing('Initializing scan...'),
+  readingExclusions('Reading exclusions & .gitignore...'),
+  analyzingCode('Analyzing code lines (Tokei)...'),
+  scanningFiles('Scanning directory tree & files...'),
+  processingResults('Building tree & finalizing stats...');
+
+  final String label;
+  const ScanStage(this.label);
+}
+
+class ScanProgress {
+  final ScanStage stage;
+  final String message;
+  final int filesScanned;
+  final int dirsScanned;
+
+  const ScanProgress({
+    required this.stage,
+    required this.message,
+    this.filesScanned = 0,
+    this.dirsScanned = 0,
+  });
+}
+
 /// Totals for the entire directory on disk, counted BEFORE exclusions
 /// are applied, so exclusions can be reasoned about.
 class ScanTotals {
@@ -35,6 +60,7 @@ class ScannerService {
 
   Future<ScanResult> scanDirectoryInIsolate(
     String path, {
+    void Function(ScanProgress progress)? onProgress,
     void Function()? onCancel,
   }) async {
     final rootDir = Directory(path);
@@ -56,12 +82,16 @@ class ScannerService {
       receivePort.listen((message) {
         if (message is ScanResult) {
           completer.complete(message);
+          receivePort.close();
+        } else if (message is ScanProgress) {
+          onProgress?.call(message);
         } else if (message is String) {
           completer.completeError(Exception(message));
+          receivePort.close();
         } else if (message == 'CANCELLED') {
           completer.completeError(Exception('Scan was cancelled by user.'));
+          receivePort.close();
         }
-        receivePort.close();
       });
     } catch (e) {
       receivePort.close();
@@ -83,10 +113,23 @@ class ScannerService {
     final ScanParams params = args[1] as ScanParams;
 
     try {
+      sendPort.send(
+        const ScanProgress(
+          stage: ScanStage.initializing,
+          message: 'Initializing scan...',
+        ),
+      );
+
       final rootDir = Directory(params.path);
 
       ExclusionsConfig activeConfig = params.exclusionsConfig;
       if (params.exclusionsConfig.gitignoreOnly) {
+        sendPort.send(
+          const ScanProgress(
+            stage: ScanStage.readingExclusions,
+            message: 'Reading .gitignore rules & patterns...',
+          ),
+        );
         final gitignoreFile = File('${params.path}${Platform.pathSeparator}.gitignore');
         final gitPatterns = ExclusionsConfig.parseGitignoreFile(gitignoreFile);
         activeConfig = ExclusionsConfig(
@@ -97,15 +140,54 @@ class ScannerService {
         );
       }
 
-      final totals = ScanTotals();
+      sendPort.send(
+        const ScanProgress(
+          stage: ScanStage.analyzingCode,
+          message: 'Running code line and language analysis (Tokei)...',
+        ),
+      );
+
       final tokeiStats = _runTokei(params.path);
+
+      final totals = ScanTotals();
+      int lastReportedCount = 0;
+
+      sendPort.send(
+        const ScanProgress(
+          stage: ScanStage.scanningFiles,
+          message: 'Traversing directory structure...',
+        ),
+      );
+
       final results = _scanSubDir(
         rootDir,
         activeConfig,
         totals,
         tokeiStats: tokeiStats,
         rootPath: '',
+        onItemProcessed: () {
+          final totalItems = totals.files + totals.directories;
+          if (totalItems - lastReportedCount >= 40) {
+            lastReportedCount = totalItems;
+            sendPort.send(
+              ScanProgress(
+                stage: ScanStage.scanningFiles,
+                message: 'Scanned ${totals.files} files and ${totals.directories} folders...',
+                filesScanned: totals.files,
+                dirsScanned: totals.directories,
+              ),
+            );
+          }
+        },
       );
+
+      sendPort.send(
+        const ScanProgress(
+          stage: ScanStage.processingResults,
+          message: 'Building directory tree and finalizing stats...',
+        ),
+      );
+
       sendPort.send(ScanResult(nodes: results, totals: totals));
     } catch (e) {
       sendPort.send(e.toString());
@@ -120,6 +202,7 @@ class ScannerService {
     Map<String, ({int total, int code, int blank, int comments})> tokeiStats =
         const {},
     String rootPath = '',
+    void Function()? onItemProcessed,
   }) {
     final items = <FsNode>[];
 
@@ -130,7 +213,7 @@ class ScannerService {
 
     try {
       final entities = dir.listSync(followLinks: false);
-      final included = <(FileSystemEntity, List<FsNode>)>[];
+      final included = <(FileSystemEntity, List<FsNode>, FileStat?)>[];
 
       for (final entity in entities) {
         final name = entity.path.split(Platform.pathSeparator).last;
@@ -148,6 +231,7 @@ class ScannerService {
 
         if (entity is Directory) {
           totals.directories++;
+          onItemProcessed?.call();
           final subChildren = _scanSubDir(
             entity,
             exclusionsConfig,
@@ -155,21 +239,29 @@ class ScannerService {
             collectNodes: collectNodes && !isExcluded,
             tokeiStats: tokeiStats,
             rootPath: relativePath,
+            onItemProcessed: onItemProcessed,
           );
           if (collectNodes && !isExcluded) {
-            included.add((entity, subChildren));
+            FileStat? dirStat;
+            try {
+              dirStat = entity.statSync();
+            } catch (_) {}
+            included.add((entity, subChildren, dirStat));
           }
         } else if (entity is File) {
           totals.files++;
+          onItemProcessed?.call();
+          FileStat? fileStat;
           try {
-            totals.bytes += entity.lengthSync();
+            fileStat = entity.statSync();
+            totals.bytes += fileStat.size;
           } catch (_) {
             // Ignore files that cannot be stat'ed (locked/permission issues)
           }
           // Skip adding the file to the visible tree if the parent folder
           // has a "folders only" pattern (e.g. assets/icons/*)
           if (collectNodes && !isExcluded && !filesHidden) {
-            included.add((entity, const <FsNode>[]));
+            included.add((entity, const <FsNode>[], fileStat));
           }
         }
       }
@@ -186,13 +278,18 @@ class ScannerService {
         return aName.compareTo(bName);
       });
 
-      for (final (entity, children) in included) {
+      for (final (entity, children, stat) in included) {
         if (entity is Directory) {
-          items.add(FsNode.fromFileSystemEntity(entity, children: children));
+          items.add(FsNode.fromFileSystemEntity(
+            entity,
+            children: children,
+            stat: stat,
+          ));
         } else if (entity is File) {
           final stats = tokeiStats[_tokeiKey(entity.path)];
           items.add(FsNode.fromFileSystemEntity(
             entity,
+            stat: stat,
             lineCount: stats?.total ?? 0,
             codeLineCount: stats?.code ?? 0,
             blankLineCount: stats?.blank ?? 0,
@@ -209,12 +306,6 @@ class ScannerService {
 
   /// Runs the bundled tokei CLI once over the whole root and returns
   /// per-file line statistics keyed by normalized absolute path.
-  ///
-  /// Exclusions (including gitignore patterns) are applied by this app's own
-  /// walker, so tokei is told to ignore none of them (`--no-ignore`); only
-  /// stats for files that end up included in the tree are read back.
-  /// Returns an empty map when tokei is unavailable or fails, leaving line
-  /// counts at zero without falling back to custom counting.
   static Map<String, ({int total, int code, int blank, int comments})>
       _runTokei(String rootPath) {
     final result = <String, ({int total, int code, int blank, int comments})>{};
@@ -265,9 +356,6 @@ class ScannerService {
   static String _tokeiKey(String path) =>
       path.replaceAll('\\', '/').toLowerCase();
 
-  /// Locates the tokei executable: `TOKEI_PATH` env var, next to the app
-  /// executable (bundled by CMake at build time), relative to the working
-  /// directory (dev runs), then on PATH.
   static String? _findTokei() {
     final env = Platform.environment['TOKEI_PATH'];
     if (env != null && env.isNotEmpty && File(env).existsSync()) {

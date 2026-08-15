@@ -36,7 +36,29 @@ enum AppSvgIcon {
   checkSquareFill('assets/icons/check-square-fill.svg'),
   squareDuotone('assets/icons/square-duotone.svg'),
   checkBold('assets/icons/check-bold.svg'),
-  sparkleDuotone('assets/icons/sparkle-duotone.svg');
+  sparkleDuotone('assets/icons/sparkle-duotone.svg'),
+  gitCommitDuotone('assets/icons/git-commit-duotone.svg'),
+  circlesThreePlusDuotone('assets/icons/circles-three-plus-duotone.svg'),
+  linkDuotone('assets/icons/link-duotone.svg'),
+  packageDuotone('assets/icons/package-duotone.svg'),
+  funnelSimpleBold('assets/icons/funnel-simple-bold.svg'),
+  caretUpFill('assets/icons/caret-up-fill.svg'),
+  radioactiveFill('assets/icons/radioactive-fill.svg'),
+  shieldWarningFill('assets/icons/shield-warning-fill.svg'),
+  arrowUpFill('assets/icons/arrow-up-fill.svg'),
+  foldersFill('assets/icons/folders-fill.svg'),
+  fileCodeFill('assets/icons/file-code-fill.svg'),
+  gitCommitFill('assets/icons/git-commit-fill.svg'),
+  circlesThreePlusFill('assets/icons/circles-three-plus-fill.svg'),
+  trashFill('assets/icons/trash-fill.svg'),
+  filesFill('assets/icons/files-fill.svg'),
+  hardDrivesFill('assets/icons/hard-drives-fill.svg'),
+  sparkleFill('assets/icons/sparkle-fill.svg'),
+  passwordFill('assets/icons/password-fill.svg'),
+  passwordDuotone('assets/icons/password-duotone.svg'),
+  eyeSlashFill('assets/icons/eye-slash-fill.svg'),
+  eyeDuotone('assets/icons/eye-duotone.svg'),
+  arrowSquareOutDuotone('assets/icons/arrow-square-out-duotone.svg');
 
   final String assetPath;
   const AppSvgIcon(this.assetPath);

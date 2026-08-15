@@ -220,6 +220,9 @@ class ExclusionsConfig {
     return [];
   }
 
+  static final Map<String, RegExp> _patternRegexCache = {};
+  static final Map<String, RegExp> _pathPatternRegexCache = {};
+
   /// Matches [relativePath] (e.g. "build/flutter_assets") against a
   /// path-style [pattern] (e.g. "build/flutter_assets" or "build/*").
   ///
@@ -249,9 +252,11 @@ class ExclusionsConfig {
 
     // Wildcard support
     if (p.contains('*') || p.contains('?')) {
-      final regexString =
-          '^${RegExp.escape(p).replaceAll(r'\*', '.*').replaceAll(r'\?', '.')}\$';
-      final regex = RegExp(regexString, caseSensitive: false);
+      final regex = _pathPatternRegexCache.putIfAbsent(p, () {
+        final regexString =
+            '^${RegExp.escape(p).replaceAll(r'\*', '.*').replaceAll(r'\?', '.')}\$';
+        return RegExp(regexString, caseSensitive: false);
+      });
       return regex.hasMatch(rp) || regex.hasMatch('$rp/');
     }
 
@@ -271,11 +276,14 @@ class ExclusionsConfig {
 
     if (p == text) return true;
     if (p.contains('*') || p.contains('?')) {
-      final regexString =
-          '^${RegExp.escape(p).replaceAll(r'\*', '.*').replaceAll(r'\?', '.')}\$';
-      final regex = RegExp(regexString, caseSensitive: false);
+      final regex = _patternRegexCache.putIfAbsent(p, () {
+        final regexString =
+            '^${RegExp.escape(p).replaceAll(r'\*', '.*').replaceAll(r'\?', '.')}\$';
+        return RegExp(regexString, caseSensitive: false);
+      });
       return regex.hasMatch(text);
     }
     return text.toLowerCase() == p.toLowerCase();
   }
 }
+

@@ -79,12 +79,13 @@ class FsNode {
   static FsNode fromFileSystemEntity(
     FileSystemEntity entity, {
     List<FsNode>? children,
+    FileStat? stat,
     int lineCount = 0,
     int codeLineCount = 0,
     int blankLineCount = 0,
     int commentLineCount = 0,
   }) {
-    final stat = entity.statSync();
+    final effectiveStat = stat ?? entity.statSync();
     final name = entity.path.split(Platform.pathSeparator).last;
 
     if (entity is Directory) {
@@ -102,9 +103,9 @@ class FsNode {
         path: entity.path,
         size: dirSize,
         sizeFormatted: formatBytes(dirSize),
-        lastModified: stat.modified,
-        lastAccessed: stat.accessed,
-        created: stat.changed,
+        lastModified: effectiveStat.modified,
+        lastAccessed: effectiveStat.accessed,
+        created: effectiveStat.changed,
         children: children,
       );
     } else {
@@ -113,12 +114,12 @@ class FsNode {
         name: name,
         type: 'File',
         path: entity.path,
-        size: stat.size,
-        sizeFormatted: formatBytes(stat.size),
+        size: effectiveStat.size,
+        sizeFormatted: formatBytes(effectiveStat.size),
         extension: ext,
-        lastModified: stat.modified,
-        lastAccessed: stat.accessed,
-        created: stat.changed,
+        lastModified: effectiveStat.modified,
+        lastAccessed: effectiveStat.accessed,
+        created: effectiveStat.changed,
         lineCount: lineCount,
         codeLineCount: codeLineCount,
         blankLineCount: blankLineCount,
@@ -126,6 +127,7 @@ class FsNode {
       );
     }
   }
+
 
   String toAsciiTree({String prefix = ''}) {
     final buffer = StringBuffer();
